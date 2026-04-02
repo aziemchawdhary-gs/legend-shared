@@ -19,6 +19,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.pac4j.core.context.WebContext;
+import org.pac4j.core.context.session.SessionStore;
+import org.pac4j.core.credentials.Credentials;
 import org.pac4j.core.credentials.authenticator.Authenticator;
 import org.pac4j.core.exception.CredentialsException;
 
@@ -26,7 +28,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class GitlabPersonalAccessTokenAuthenticator implements Authenticator<GitlabPersonalAccessTokenCredentials>
+public class GitlabPersonalAccessTokenAuthenticator implements Authenticator
 {
     private final String apiVersion;
     private final String host;
@@ -49,8 +51,9 @@ public class GitlabPersonalAccessTokenAuthenticator implements Authenticator<Git
     }
 
     @Override
-    public void validate(GitlabPersonalAccessTokenCredentials credentials, WebContext webContext)
+    public void validate(Credentials creds, WebContext context, SessionStore sessionStore)
     {
+        GitlabPersonalAccessTokenCredentials credentials = (GitlabPersonalAccessTokenCredentials) creds;
         UserInformation userInfo = getUserInformation(credentials.getPersonalAccessToken());
         credentials.setUserId(userInfo.username);
         credentials.setUserName(userInfo.name);

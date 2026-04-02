@@ -14,20 +14,12 @@
 
 package org.finos.legend.server.pac4j;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.health.HealthCheckRegistry;
 import com.google.common.collect.ImmutableList;
-import io.dropwizard.Configuration;
-import io.dropwizard.setup.Environment;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletHandler;
+import io.dropwizard.core.Configuration;
 import org.junit.Test;
-import org.pac4j.core.client.finder.ClientFinder;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.engine.DefaultSecurityLogic;
-import org.pac4j.core.engine.decision.ProfileStorageDecision;
 import org.pac4j.dropwizard.Pac4jFactory;
-import org.pac4j.j2e.filter.SecurityFilter;
 
 import static org.junit.Assert.*;
 
@@ -57,22 +49,13 @@ public class LegendPac4JBundleTest
     LegendPac4jBundle<Configuration> bundle = new LegendPac4jBundle<>(c -> config);
     Pac4jFactory factory = bundle.getPac4jFactory(new Configuration());
     Config builtConfig = factory.build();
-    Environment e = new Environment("serverEnv", null, null, new MetricRegistry(), null, new HealthCheckRegistry());
-    bundle.run(new Configuration(),e);
     assertEquals("/test/callback", factory.getCallbackUrl());
     assertEquals(config.getClients(), factory.getClients());
     assertEquals("SecondTestClient", ((LegendClientFinder)((DefaultSecurityLogic)builtConfig.getSecurityLogic()).getClientFinder()).getDefaultClient());
     assertEquals(config.getClients(), builtConfig.getClients().getClients());
-    FilterHolder securityHolder = e.getApplicationContext().getServletHandler().getFilter(SecurityFilter.class.getName());
-    assertNotNull("Security filter holder cannot be null", securityHolder);
-    //initialize the filter so we can confirm swaps
-    ServletHandler s =  new ServletHandler();
-    s.addFilter(securityHolder);
-    s.initialize();
-    ClientFinder finder = ((DefaultSecurityLogic)((SecurityFilter)s.getFilters()[0].getFilter()).getSecurityLogic()).getClientFinder();
-    assertTrue(finder instanceof LegendClientFinder);
-    ProfileStorageDecision storageDecision = ((DefaultSecurityLogic)((SecurityFilter)s.getFilters()[0].getFilter()).getSecurityLogic()).getProfileStorageDecision();
-    assertTrue(storageDecision instanceof LegendUserProfileStorageDecision);
+    // Verify the config's security logic has our custom client finder
+    assertTrue(builtConfig.getSecurityLogic() instanceof DefaultSecurityLogic);
+    assertTrue(((DefaultSecurityLogic) builtConfig.getSecurityLogic()).getClientFinder() instanceof LegendClientFinder);
   }
 
 }

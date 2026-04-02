@@ -23,6 +23,8 @@ import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import org.pac4j.core.context.WebContext;
+import org.pac4j.core.context.session.SessionStore;
+import org.pac4j.core.credentials.Credentials;
 import org.pac4j.core.credentials.authenticator.Authenticator;
 import org.pac4j.core.exception.BadCredentialsException;
 import org.pac4j.core.exception.CredentialsException;
@@ -39,7 +41,7 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 
-public class DelegationKerberosAuthenticator implements Authenticator<KerberosCredentials>
+public class DelegationKerberosAuthenticator implements Authenticator
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(DelegationKerberosAuthenticator.class);
     private final String servicePrincipal;
@@ -60,8 +62,9 @@ public class DelegationKerberosAuthenticator implements Authenticator<KerberosCr
     }
 
     @Override
-    public void validate(KerberosCredentials credentials, WebContext webContext)
+    public void validate(Credentials creds, WebContext webContext, SessionStore sessionStore)
     {
+        KerberosCredentials credentials = (KerberosCredentials) creds;
         try
         {
             GSSManager manager = GSSManager.getInstance();
@@ -77,7 +80,7 @@ public class DelegationKerberosAuthenticator implements Authenticator<KerberosCr
             GSSCredential cred = Subject.doAs(subject, action);
 
             GSSContext context = manager.createContext(cred);
-       
+
             context.requestCredDeleg(true);
             byte[] resToken = context.acceptSecContext(credentials.getKerberosTicket(), 0, credentials.getKerberosTicket().length);
 
@@ -96,7 +99,6 @@ public class DelegationKerberosAuthenticator implements Authenticator<KerberosCr
                     // ignore errors building the message
                     message = baseMessage;
                 }
-                webContext.writeResponseContent(baseMessage);
                 LOGGER.error("validate failed: context has no delegate {}",message);
                 throw new BadCredentialsException(message);
             }

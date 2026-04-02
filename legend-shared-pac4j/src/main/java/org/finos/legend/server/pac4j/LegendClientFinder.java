@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.client.Clients;
@@ -68,7 +69,8 @@ public class LegendClientFinder extends DefaultSecurityClientFinder
     if (CommonHelper.isNotBlank(securityClientNames))
     {
       List<String> names = Arrays.asList(securityClientNames.split(","));
-      String clientNameOnRequest = context.getRequestParameter(this.clientNameParameter);
+      Optional<String> clientNameOnRequestOpt = context.getRequestParameter(this.clientNameParameter);
+      String clientNameOnRequest = clientNameOnRequestOpt.orElse(null);
       logger.debug("clientNameOnRequest: {}", clientNameOnRequest);
       String nameFound;
       if (clientNameOnRequest != null)
@@ -85,8 +87,8 @@ public class LegendClientFinder extends DefaultSecurityClientFinder
         while (var13.hasNext())
         {
           nameFound = (String) var13.next();
-          Client client = clients.findClient(nameFound);
-          result.add(client);
+          Optional<Client> clientOpt = clients.findClient(nameFound);
+          clientOpt.ifPresent(result::add);
         }
       }
     }
@@ -101,7 +103,8 @@ public class LegendClientFinder extends DefaultSecurityClientFinder
   public List<Client> findUtil(Clients clients, List<String> names, String toFind)
   {
     List<Client> result = new ArrayList();
-    Client client = clients.findClient(toFind);
+    Optional<Client> clientOpt = clients.findClient(toFind);
+    Client client = clientOpt.orElseThrow(() -> new TechnicalException("Client not found: " + toFind));
     String nameFound = client.getName();
     boolean found = false;
     Iterator var11 = names.iterator();

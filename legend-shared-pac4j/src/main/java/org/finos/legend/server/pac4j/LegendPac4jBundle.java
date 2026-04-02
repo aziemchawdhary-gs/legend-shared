@@ -20,14 +20,14 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import io.dropwizard.Configuration;
+import io.dropwizard.core.Configuration;
 import io.dropwizard.configuration.ConfigurationException;
 import io.dropwizard.configuration.ConfigurationSourceProvider;
-import io.dropwizard.server.SimpleServerFactory;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
+import io.dropwizard.core.server.SimpleServerFactory;
+import io.dropwizard.core.setup.Bootstrap;
+import io.dropwizard.core.setup.Environment;
 import javax.security.auth.Subject;
-import javax.servlet.DispatcherType;
+import jakarta.servlet.DispatcherType;
 import org.apache.commons.lang.StringUtils;
 import org.bson.Document;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -41,17 +41,17 @@ import org.finos.legend.server.pac4j.kerberos.SubjectExecutor;
 import org.finos.legend.server.pac4j.mongostore.MongoDbSessionStore;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.config.Config;
-import org.pac4j.core.context.J2EContext;
-import org.pac4j.core.context.session.J2ESessionStore;
+import org.pac4j.jee.context.JEEContext;
+import org.pac4j.jee.context.session.JEESessionStore;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.http.url.DefaultUrlResolver;
-import org.pac4j.core.matching.Matcher;
-import org.pac4j.core.matching.PathMatcher;
-import org.pac4j.core.util.JavaSerializationHelper;
+import org.pac4j.core.matching.matcher.Matcher;
+import org.pac4j.core.matching.matcher.PathMatcher;
+import org.pac4j.core.util.serializer.JavaSerializer;
 import org.pac4j.dropwizard.Pac4jBundle;
 import org.pac4j.dropwizard.Pac4jFactory;
 import org.pac4j.dropwizard.Pac4jFeatureSupport;
-import org.pac4j.j2e.filter.SecurityFilter;
+import org.pac4j.jee.filter.SecurityFilter;
 import org.pac4j.jax.rs.pac4j.JaxRsContext;
 import org.pac4j.jax.rs.servlet.pac4j.ServletSessionStore;
 import java.io.IOException;
@@ -160,8 +160,8 @@ public class LegendPac4jBundle<C extends Configuration> extends Pac4jBundle<C> i
                             config.setSessionStore(new HazelcastSessionStore(
                                     legendConfig.getHazelcastSession().getConfigFilePath(),
                                     ImmutableMap.of(
-                                            J2EContext.class, new J2ESessionStore(),
-                                            JaxRsContext.class, new ServletSessionStore()), sessionCookieName));
+                                            JEEContext.class, JEESessionStore.INSTANCE,
+                                            JaxRsContext.class, ServletSessionStore.INSTANCE), sessionCookieName));
                         }
                         else if (legendConfig.getMongoSession() != null && legendConfig.getMongoSession().isEnabled())
                         {
@@ -180,8 +180,8 @@ public class LegendPac4jBundle<C extends Configuration> extends Pac4jBundle<C> i
                                             legendConfig.getMongoSession().getCryptoAlgorithm(),
                                             legendConfig.getMongoSession().getMaxSessionLength(),
                                             userSessions, ImmutableMap.of(
-                                            J2EContext.class, new J2ESessionStore(),
-                                            JaxRsContext.class, new ServletSessionStore()),
+                                            JEEContext.class, JEESessionStore.INSTANCE,
+                                            JaxRsContext.class, ServletSessionStore.INSTANCE),
                                             subjectExecutor, legendConfig.getTrustedPackages(), sessionCookieName));
                         }
                         return config;
@@ -224,7 +224,8 @@ public class LegendPac4jBundle<C extends Configuration> extends Pac4jBundle<C> i
         securityFilterConfiguration.setAuthorizers(String.join(",", factory.getAuthorizers().keySet()));
         DefaultSecurityLogic s = new DefaultSecurityLogic();
         s.setClientFinder(legendConfig.getDefaultSecurityClient());
-        s.setProfileStorageDecision(new LegendUserProfileStorageDecision());
+        s.setLoadProfilesFromSession(
+                LegendUserProfileStorageDecision.shouldLoadProfilesFromSession(legendConfig.getClients()));
         factory.setSecurityLogic(s);
         factory.setServlet(servletConfiguration);
 
@@ -237,8 +238,10 @@ public class LegendPac4jBundle<C extends Configuration> extends Pac4jBundle<C> i
         {
             legendConfig.getBypassBranches().forEach(matcher::excludeBranch);
         }
+        PathMatcher callbackPathMatcher = new PathMatcher();
+        callbackPathMatcher.excludePath(callbackFilterUrl);
         Map<String, Matcher> matchers =
-                ImmutableMap.of(callbackMatcher, new PathMatcher("^" + callbackFilterUrl + "$"),
+                ImmutableMap.of(callbackMatcher, callbackPathMatcher,
                         bypassMatcher, matcher);
         factory.setMatchers(matchers);
         factory.setClients(legendConfig.getClients());
@@ -286,8 +289,9 @@ public class LegendPac4jBundle<C extends Configuration> extends Pac4jBundle<C> i
                     s.initialize();
                     SecurityFilter filter = (SecurityFilter)  s.getFilters()[0].getFilter();
                     DefaultSecurityLogic securityLogic = (DefaultSecurityLogic) filter.getSecurityLogic();
-                    securityLogic.setClientFinder(((DefaultSecurityLogic)this.getConfig().getSecurityLogic()).getClientFinder());
-                    securityLogic.setProfileStorageDecision(new LegendUserProfileStorageDecision());
+                    DefaultSecurityLogic configSecurityLogic = (DefaultSecurityLogic) this.getConfig().getSecurityLogic();
+                    securityLogic.setClientFinder(configSecurityLogic.getClientFinder());
+                    securityLogic.setLoadProfilesFromSession(configSecurityLogic.isLoadProfilesFromSession());
                     filter.setSecurityLogic(securityLogic);
                     h.stop();
                     h.setFilter(filter);
@@ -315,9 +319,9 @@ public class LegendPac4jBundle<C extends Configuration> extends Pac4jBundle<C> i
         return supportedFeatures;
     }
 
-    public static JavaSerializationHelper getSerializationHelper(List<String> extraPackages)
+    public static JavaSerializer getSerializationHelper(List<String> extraPackages)
     {
-        JavaSerializationHelper helper = new JavaSerializationHelper();
+        JavaSerializer helper = new JavaSerializer();
         helper.addTrustedPackage("org.finos.legend.server.pac4j."); // Required to serialize KerberosProfile
         helper.addTrustedPackage("org.pac4j.core.profile."); // Required to serialize UserProfile
         helper.addTrustedPackage("javax.security.auth."); // Required to serialize KerberosTicket

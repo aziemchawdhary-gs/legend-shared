@@ -17,34 +17,36 @@ package org.finos.legend.opentracing;
 import io.opentracing.Scope;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.opentracing.contrib.jaxrs2.internal.SpanWrapper;
-import io.opentracing.contrib.jaxrs2.server.ServerHeadersExtractTextMap;
 import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMap;
 import io.opentracing.propagation.TextMapAdapter;
 import io.opentracing.tag.Tags;
 import io.prometheus.client.Gauge;
+import org.finos.legend.opentracing.jaxrs2.SpanWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MultivaluedHashMap;
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @SuppressWarnings("WeakerAccess")
 public class OpenTracingFilter implements Filter
@@ -96,15 +98,11 @@ public class OpenTracingFilter implements Filter
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
 
-        MultivaluedHashMap<String, String> headerMap = new MultivaluedHashMap<>();
-        Collections.list(httpRequest.getHeaderNames())
-                .forEach(header -> headerMap.put(header, Collections.list(httpRequest.getHeaders(header))));
+        spanBuilder.asChildOf(this.tracer.extract(Format.Builtin.HTTP_HEADERS, new ServerHeadersExtractTextMap(httpRequest)));
 
-        spanBuilder.asChildOf(this.tracer.extract(Format.Builtin.HTTP_HEADERS, new ServerHeadersExtractTextMap(headerMap)));
-
-        try (Scope scope = spanBuilder.startActive(false))
+        Span span = spanBuilder.start();
+        try (Scope scope = tracer.activateSpan(span))
         {
-            Span span = scope.span();
             try
             {
                 // Update request
@@ -219,6 +217,40 @@ public class OpenTracingFilter implements Filter
         @Override
         public void onStartAsync(AsyncEvent event)
         {
+        }
+    }
+
+    /**
+     * Replaces io.opentracing.contrib.jaxrs2.server.ServerHeadersExtractTextMap.
+     * Extracts HTTP headers from an HttpServletRequest as a TextMap for OpenTracing propagation.
+     */
+    static class ServerHeadersExtractTextMap implements TextMap
+    {
+        private final HttpServletRequest request;
+
+        ServerHeadersExtractTextMap(HttpServletRequest request)
+        {
+            this.request = request;
+        }
+
+        @Override
+        public Iterator<Map.Entry<String, String>> iterator()
+        {
+            Map<String, String> headers = new LinkedHashMap<>();
+            Enumeration<String> names = request.getHeaderNames();
+            while (names != null && names.hasMoreElements())
+            {
+                String name = names.nextElement();
+                headers.put(name, request.getHeader(name));
+            }
+            return headers.entrySet().iterator();
+        }
+
+        @Override
+        public void put(String key, String value)
+        {
+            throw new UnsupportedOperationException(
+                    ServerHeadersExtractTextMap.class.getName() + " should only be used with Tracer.extract()");
         }
     }
 }

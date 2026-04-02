@@ -17,38 +17,39 @@ package org.finos.legend.server.shared.logs;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import io.dropwizard.Application;
-import io.dropwizard.Configuration;
-import io.dropwizard.setup.Environment;
+import io.dropwizard.core.Application;
+import io.dropwizard.core.Configuration;
+import io.dropwizard.core.setup.Environment;
 import io.dropwizard.testing.ResourceHelpers;
-import io.dropwizard.testing.junit.DropwizardAppRule;
+import io.dropwizard.testing.junit5.DropwizardAppExtension;
+import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 import org.apache.log4j.LogManager;
 import org.finos.legend.server.shared.ServerIntegrationTestUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
+@ExtendWith(DropwizardExtensionsSupport.class)
 public class LogRoutingTest
 {
-    @ClassRule
-    public static final DropwizardAppRule<Configuration> RULE = new DropwizardAppRule<>(TestServer.class, ResourceHelpers.resourceFilePath("testConfig.json"));
+    public static final DropwizardAppExtension<Configuration> RULE = new DropwizardAppExtension<>(TestServer.class, ResourceHelpers.resourceFilePath("testConfig.json"));
 
     public static final String LOG_LINE = "test method called";
     private ListAppender<ILoggingEvent> logbackAppender;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
         Logger logbackLogger = (Logger)LoggerFactory.getLogger(TestServer.TestResource.class);
@@ -57,7 +58,7 @@ public class LogRoutingTest
         logbackLogger.addAppender(logbackAppender);
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
         logbackAppender.stop();
@@ -93,7 +94,7 @@ public class LogRoutingTest
 
         }
 
-        @javax.ws.rs.Path("/test")
+        @jakarta.ws.rs.Path("/test")
         public static class TestResource {
             org.apache.log4j.Logger LOG4j_LOGGER = LogManager.getLogger(TestResource.class);
             @GET
@@ -106,4 +107,3 @@ public class LogRoutingTest
     }
 
 }
-

@@ -17,10 +17,14 @@ package org.finos.legend.server.pac4j.gitlab;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.nimbusds.jose.util.DefaultResourceRetriever;
 import com.nimbusds.oauth2.sdk.util.StringUtils;
+import java.util.Optional;
 import org.finos.legend.server.pac4j.SerializableProfile;
 import org.finos.legend.server.pac4j.gitlab.ssl.TrustManagerComposite;
 import org.pac4j.core.context.WebContext;
+import org.pac4j.core.context.session.SessionStore;
+import org.pac4j.core.credentials.Credentials;
 import org.pac4j.core.http.url.DefaultUrlResolver;
+import org.pac4j.core.profile.UserProfile;
 import org.pac4j.oidc.client.OidcClient;
 import org.pac4j.oidc.config.OidcConfiguration;
 import org.pac4j.oidc.credentials.OidcCredentials;
@@ -38,7 +42,7 @@ import java.security.GeneralSecurityException;
 
 @SuppressWarnings("unused")
 @SerializableProfile
-public class GitlabClient extends OidcClient<OidcProfile, OidcConfiguration>
+public class GitlabClient extends OidcClient
 {
     private static final Logger logger = LoggerFactory.getLogger(GitlabClient.class);
     public static final String GITLAB_CLIENT_NAME = "gitlab";
@@ -75,7 +79,7 @@ public class GitlabClient extends OidcClient<OidcProfile, OidcConfiguration>
     }
 
     @Override
-    protected void clientInit()
+    protected void internalInit(boolean forceReinit)
     {
 
         if (StringUtils.isNotBlank(sslKeystore))
@@ -121,35 +125,39 @@ public class GitlabClient extends OidcClient<OidcProfile, OidcConfiguration>
                 new OidcAuthenticator(config, this)
                 {
                     @Override
-                    public void validate(OidcCredentials credentials, WebContext context)
+                    public void validate(Credentials credentials, WebContext context, SessionStore sessionStore)
                     {
                         if (proxyHost != null && !"".equals(proxyHost))
                         {
                             System.setProperty("https.proxyHost", proxyHost);
                             System.setProperty("https.proxyPort", String.valueOf(proxyPort));
-                            super.validate(credentials, context);
+                            super.validate(credentials, context, sessionStore);
                             System.setProperty("https.proxyHost", "");
                             System.setProperty("https.proxyPort", "");
                         }
                         else
                         {
-                            super.validate(credentials, context);
+                            super.validate(credentials, context, sessionStore);
                         }
                     }
                 });
         setProfileCreator(
-                new OidcProfileCreator<OidcProfile>(config)
+                new OidcProfileCreator(config, this)
                 {
                     @Override
-                    public OidcProfile create(OidcCredentials credentials, WebContext context)
+                    public Optional<UserProfile> create(Credentials credentials, WebContext context, SessionStore sessionStore)
                     {
-                        OidcProfile profile = super.create(credentials, context);
-                        profile.setId(profile.getNickname());
-                        return profile;
+                        Optional<UserProfile> profileOpt = super.create(credentials, context, sessionStore);
+                        profileOpt.ifPresent(p ->
+                        {
+                            OidcProfile profile = (OidcProfile) p;
+                            profile.setId(profile.getNickname());
+                        });
+                        return profileOpt;
                     }
                 });
         setUrlResolver(new DefaultUrlResolver(true));
-        super.clientInit();
+        super.internalInit(forceReinit);
     }
 
     public String getClientId()

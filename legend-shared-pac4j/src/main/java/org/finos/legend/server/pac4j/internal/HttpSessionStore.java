@@ -15,17 +15,16 @@
 package org.finos.legend.server.pac4j.internal;
 
 import java.util.Map;
+import java.util.Optional;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.context.session.SessionStore;
 
-public class HttpSessionStore implements SessionStore<WebContext>
+public class HttpSessionStore implements SessionStore
 {
 
-  private final Map<Class<? extends WebContext>, SessionStore<? extends WebContext>>
-      underlyingStores;
+  private final Map<Class<? extends WebContext>, SessionStore> underlyingStores;
 
-  public HttpSessionStore(
-      Map<Class<? extends WebContext>, SessionStore<? extends WebContext>> underlyingStores)
+  public HttpSessionStore(Map<Class<? extends WebContext>, SessionStore> underlyingStores)
   {
     this.underlyingStores = underlyingStores;
   }
@@ -41,13 +40,13 @@ public class HttpSessionStore implements SessionStore<WebContext>
   }
 
   @Override
-  public String getOrCreateSessionId(WebContext context)
+  public Optional<String> getSessionId(WebContext context, boolean createSession)
   {
-    return getUnderlyingSessionStore(context).getOrCreateSessionId(context);
+    return getUnderlyingSessionStore(context).getSessionId(context, createSession);
   }
 
   @Override
-  public Object get(WebContext context, String key)
+  public Optional<Object> get(WebContext context, String key)
   {
     return getUnderlyingSessionStore(context).get(context, key);
   }
@@ -65,13 +64,13 @@ public class HttpSessionStore implements SessionStore<WebContext>
   }
 
   @Override
-  public Object getTrackableSession(WebContext context)
+  public Optional<Object> getTrackableSession(WebContext context)
   {
     return getUnderlyingSessionStore(context).getTrackableSession(context);
   }
 
   @Override
-  public SessionStore<WebContext> buildFromTrackableSession(
+  public Optional<SessionStore> buildFromTrackableSession(
       WebContext context, Object trackableSession)
   {
     return getUnderlyingSessionStore(context).buildFromTrackableSession(context, trackableSession);

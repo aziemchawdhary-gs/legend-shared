@@ -15,6 +15,7 @@
 package org.finos.legend.server.pac4j.sessionutil;
 
 import com.google.common.base.Strings;
+import java.util.Optional;
 import java.util.UUID;
 import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
@@ -37,7 +38,8 @@ public class SessionToken
 
     public static SessionToken fromContext(String cookieName, WebContext context)
     {
-        String val = (String) context.getRequestAttribute(cookieName);
+        Optional<Object> attrOpt = context.getRequestAttribute(cookieName);
+        String val = (String) attrOpt.orElse(null);
         if (!Strings.isNullOrEmpty(val))
         {
             return fromTokenString(val);

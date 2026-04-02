@@ -16,10 +16,10 @@ package org.finos.legend.server.shared.staticserver;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import io.dropwizard.Configuration;
-import io.dropwizard.ConfiguredBundle;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
+import io.dropwizard.core.Configuration;
+import io.dropwizard.core.ConfiguredBundle;
+import io.dropwizard.core.setup.Bootstrap;
+import io.dropwizard.core.setup.Environment;
 import java.util.List;
 import java.util.function.Function;
 import org.eclipse.jetty.servlet.ErrorPageErrorHandler;
@@ -76,7 +76,7 @@ public class StaticServerBundle<C extends Configuration> implements ConfiguredBu
         skipPaths.addAll(staticConfig.getRouterExemptPaths());
       }
       new HtmlRouterRedirectBundle(staticPath, skipPaths, staticPath + "/index.html")
-          .run(environment);
+          .run(null, environment);
     }
     environment.healthChecks().register("Static", new org.finos.legend.server.shared.staticserver.StaticHealthcheck());
   }

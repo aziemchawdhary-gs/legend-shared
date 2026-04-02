@@ -14,12 +14,13 @@
 
 package org.finos.legend.server.pac4j;
 
+import java.util.Optional;
 import org.finos.legend.server.pac4j.internal.HttpSessionStore;
-import org.pac4j.core.context.J2EContext;
+import org.pac4j.jee.context.JEEContext;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import javax.servlet.http.Cookie;
+import jakarta.servlet.http.Cookie;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
@@ -31,7 +32,7 @@ public class SessionStoreTestUtil {
     public static void testSetCreatesCookie(HttpSessionStore store)
     {
         MockHttpServletResponse response = new MockHttpServletResponse();
-        J2EContext requestContext = new J2EContext(new MockHttpServletRequest(), response);
+        JEEContext requestContext = new JEEContext(new MockHttpServletRequest(), response);
         store.set(requestContext, "testKey", "testValue");
         Cookie[] cookies = response.getCookies();
         assertEquals(1, cookies.length);
@@ -45,7 +46,7 @@ public class SessionStoreTestUtil {
     public static void testMultipleSetsOnlyCreateOneCookie(HttpSessionStore store)
     {
         MockHttpServletResponse response = new MockHttpServletResponse();
-        J2EContext requestContext = new J2EContext(new MockHttpServletRequest(), response);
+        JEEContext requestContext = new JEEContext(new MockHttpServletRequest(), response);
         store.set(requestContext, "testKey", "testValue");
         store.set(requestContext, "testKey2", "testValue");
         store.set(requestContext, "testKey3", "testValue");
@@ -58,54 +59,54 @@ public class SessionStoreTestUtil {
     {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        J2EContext requestContext = new J2EContext(request, response);
+        JEEContext requestContext = new JEEContext(request, response);
         store.set(requestContext, "testKey", "testValue");
 
-        assertEquals("testValue", store.get(requestContext, "testKey"));
+        assertEquals("testValue", store.get(requestContext, "testKey").orElse(null));
 
         // Copy the session to the new request
         MockHttpServletRequest newRequest = new MockHttpServletRequest();
         newRequest.setSession(request.getSession());
         MockHttpServletResponse newResponse = new MockHttpServletResponse();
-        requestContext = new J2EContext(newRequest, newResponse);
+        requestContext = new JEEContext(newRequest, newResponse);
 
-        assertEquals("testValue", store.get(requestContext, "testKey"));
+        assertEquals("testValue", store.get(requestContext, "testKey").orElse(null));
     }
 
     public static void testSetThenGetFromStore(HttpSessionStore store)
     {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        J2EContext requestContext = new J2EContext(request, response);
+        JEEContext requestContext = new JEEContext(request, response);
         store.set(requestContext, "testKey", "testValue");
 
-        assertEquals("testValue", store.get(requestContext, "testKey"));
+        assertEquals("testValue", store.get(requestContext, "testKey").orElse(null));
 
         // Copy the cookie to the new request
         MockHttpServletRequest newRequest = new MockHttpServletRequest();
         newRequest.setCookies(response.getCookies());
         MockHttpServletResponse newResponse = new MockHttpServletResponse();
-        requestContext = new J2EContext(newRequest, newResponse);
+        requestContext = new JEEContext(newRequest, newResponse);
 
-        assertEquals("testValue", store.get(requestContext, "testKey"));
+        assertEquals("testValue", store.get(requestContext, "testKey").orElse(null));
     }
 
     public static void testSimulateCookieExpiryThenGetFromSession(HttpSessionStore store)
     {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        J2EContext requestContext = new J2EContext(request, response);
+        JEEContext requestContext = new JEEContext(request, response);
         store.set(requestContext, "testKey", "testValue");
 
-        assertEquals("testValue", store.get(requestContext, "testKey"));
+        assertEquals("testValue", store.get(requestContext, "testKey").orElse(null));
         Cookie[] initialResponseCookies = response.getCookies();
         // Copy the session to the new request but not the cookie. This should force creation of a new cookie;
         MockHttpServletRequest newRequest = new MockHttpServletRequest();
         newRequest.setSession(request.getSession());
         MockHttpServletResponse newResponse = new MockHttpServletResponse();
-        requestContext = new J2EContext(newRequest, newResponse);
+        requestContext = new JEEContext(newRequest, newResponse);
 
-        assertEquals("testValue", store.get(requestContext, "testKey"));
+        assertEquals("testValue", store.get(requestContext, "testKey").orElse(null));
         Cookie[] secondaryResponseCookies = newResponse.getCookies();
         assertNotEquals(secondaryResponseCookies, initialResponseCookies);
     }

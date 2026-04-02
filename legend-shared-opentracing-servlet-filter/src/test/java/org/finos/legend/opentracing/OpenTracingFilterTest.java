@@ -14,21 +14,19 @@
 
 package org.finos.legend.opentracing;
 
-import io.opentracing.contrib.jaxrs2.internal.SpanWrapper;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
+import org.finos.legend.opentracing.jaxrs2.SpanWrapper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.util.Collections;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import static io.opentracing.contrib.jaxrs2.internal.SpanWrapper.PROPERTY_NAME;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -54,7 +52,7 @@ public class OpenTracingFilterTest
     Assert.assertEquals(1, tracer.finishedSpans().size());
     MockSpan span = tracer.finishedSpans().get(0);
     ArgumentCaptor<SpanWrapper> spanCaptor = ArgumentCaptor.forClass(SpanWrapper.class);
-    verify(httpRequest).setAttribute(eq(PROPERTY_NAME), spanCaptor.capture());
+    verify(httpRequest).setAttribute(eq(SpanWrapper.PROPERTY_NAME), spanCaptor.capture());
     Assert.assertEquals(span, spanCaptor.getValue().get());
   }
 
@@ -84,7 +82,7 @@ public class OpenTracingFilterTest
     Assert.assertEquals(1, tracer.finishedSpans().size());
     MockSpan span = tracer.finishedSpans().get(0);
     ArgumentCaptor<SpanWrapper> spanCaptor = ArgumentCaptor.forClass(SpanWrapper.class);
-    verify(httpRequest).setAttribute(eq(PROPERTY_NAME), spanCaptor.capture());
+    verify(httpRequest).setAttribute(eq(SpanWrapper.PROPERTY_NAME), spanCaptor.capture());
     Assert.assertEquals(span, spanCaptor.getValue().get());
     Assert.assertEquals(Boolean.TRUE, span.tags().get("error"));
     Assert.assertEquals(1, span.logEntries().size());

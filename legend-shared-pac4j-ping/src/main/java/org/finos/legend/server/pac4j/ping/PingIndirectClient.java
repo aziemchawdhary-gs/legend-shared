@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unused")
 @SerializableProfile
-public class PingIndirectClient extends OidcClient<OidcProfile, OidcConfiguration>
+public class PingIndirectClient extends OidcClient
 {
     private static final Logger logger = LoggerFactory.getLogger(PingIndirectClient.class);
 
@@ -59,7 +59,7 @@ public class PingIndirectClient extends OidcClient<OidcProfile, OidcConfiguratio
     private Map<String, String> customParams;
 
     @Override
-    protected void clientInit()
+    protected void internalInit(boolean forceReinit)
     {
         OidcConfiguration config = new OidcConfiguration();
         config.setClientId(clientId);
@@ -85,8 +85,8 @@ public class PingIndirectClient extends OidcClient<OidcProfile, OidcConfiguratio
 
         setConfiguration(config);
         setAuthenticator(new OidcAuthenticator(config, this));
-        setProfileCreator(new OidcProfileCreator<>(config));
+        setProfileCreator(new OidcProfileCreator(config, this));
         setUrlResolver(new DefaultUrlResolver(true));
-        super.clientInit();
+        super.internalInit(forceReinit);
     }
 }

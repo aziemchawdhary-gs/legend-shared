@@ -16,31 +16,40 @@ package org.finos.legend.server.pac4j;
 
 import java.util.List;
 import org.pac4j.core.client.Client;
-import org.pac4j.core.client.DirectClient;
-import org.pac4j.core.context.WebContext;
-import org.pac4j.core.engine.decision.ProfileStorageDecision;
-import org.pac4j.core.profile.CommonProfile;
 
-public class LegendUserProfileStorageDecision<C extends WebContext> implements ProfileStorageDecision<C>
+/**
+ * Utility class that checks whether profile storage in session is needed
+ * based on the {@link SerializableProfile} annotation on client classes.
+ *
+ * <p>In pac4j 5.x, the {@code ProfileStorageDecision} interface was removed.
+ * This class preserves the original logic as a static utility method that
+ * can be used to determine the value for
+ * {@link org.pac4j.core.engine.DefaultSecurityLogic#setLoadProfilesFromSession(boolean)}.
+ */
+public class LegendUserProfileStorageDecision
 {
 
   public LegendUserProfileStorageDecision()
   {
   }
 
-  @Override
-  public boolean mustLoadProfilesFromSession(C context, List<Client> currentClients)
+  /**
+   * Check if any of the given clients have the {@link SerializableProfile} annotation,
+   * indicating that profiles should be stored in / loaded from the session.
+   *
+   * @param currentClients the list of clients to check
+   * @return true if at least one client has the SerializableProfile annotation
+   */
+  public static boolean shouldLoadProfilesFromSession(List<Client> currentClients)
   {
+    if (currentClients == null || currentClients.isEmpty())
+    {
+      return false;
+    }
     return checkForSerializableAnnotation(currentClients);
   }
 
-  @Override
-  public boolean mustSaveProfileInSession(C context, List<Client> currentClients, DirectClient directClient, CommonProfile profile)
-  {
-    return checkForSerializableAnnotation(currentClients);
-  }
-
-  public boolean checkForSerializableAnnotation(List<Client> currentClients)
+  public static boolean checkForSerializableAnnotation(List<Client> currentClients)
   {
     Client c = currentClients.iterator().next();
     return c.getClass().isAnnotationPresent(SerializableProfile.class);

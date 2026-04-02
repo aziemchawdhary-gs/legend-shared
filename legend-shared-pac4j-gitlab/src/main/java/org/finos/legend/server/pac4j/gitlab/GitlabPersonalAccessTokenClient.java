@@ -19,7 +19,7 @@ import org.finos.legend.server.pac4j.SerializableProfile;
 import org.pac4j.core.client.DirectClient;
 
 @SerializableProfile
-public class GitlabPersonalAccessTokenClient extends DirectClient<GitlabPersonalAccessTokenCredentials, GitlabPersonalAccessTokenProfile>
+public class GitlabPersonalAccessTokenClient extends DirectClient
 {
     public static final String GITLAB_PERSONAL_ACCESS_TOKEN_CLIENT_NAME = "gitlabPAToken";
 
@@ -56,15 +56,15 @@ public class GitlabPersonalAccessTokenClient extends DirectClient<GitlabPersonal
     }
 
     @Override
-    protected void clientInit()
+    protected void internalInit(boolean forceReinit)
     {
-        defaultAuthenticator(new GitlabPersonalAccessTokenAuthenticator(
+        setAuthenticator(new GitlabPersonalAccessTokenAuthenticator(
                 this.scheme,
                 this.host != null ? this.host : this.gitlabHost,
                 this.port,
                 this.apiVersion != null ? this.apiVersion : this.gitlabApiVersion
         ));
-        defaultCredentialsExtractor(new GitlabPersonalAccessTokenExtractor(this.headerTokenName));
-        defaultProfileCreator(new GitlabPersonalAccessTokenProfileCreator(this.host != null ? this.host : this.gitlabHost));
+        setCredentialsExtractor(new GitlabPersonalAccessTokenExtractor(this.headerTokenName));
+        setProfileCreator(new GitlabPersonalAccessTokenProfileCreator(this.host != null ? this.host : this.gitlabHost));
     }
 }

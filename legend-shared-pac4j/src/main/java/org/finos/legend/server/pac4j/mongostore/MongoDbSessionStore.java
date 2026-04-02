@@ -22,10 +22,10 @@ import org.finos.legend.server.pac4j.internal.HttpSessionStore;
 import org.finos.legend.server.pac4j.kerberos.SubjectExecutor;
 import org.finos.legend.server.pac4j.sessionutil.SessionToken;
 import org.finos.legend.server.pac4j.sessionutil.UuidUtils;
-import org.pac4j.core.context.Pac4jConstants;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.context.session.SessionStore;
-import org.pac4j.core.util.JavaSerializationHelper;
+import org.pac4j.core.util.Pac4jConstants;
+import org.pac4j.core.util.serializer.JavaSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.Serializable;
@@ -36,6 +36,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class MongoDbSessionStore extends HttpSessionStore
@@ -46,7 +47,7 @@ public class MongoDbSessionStore extends HttpSessionStore
     private final MongoCollection<Document> userSessions;
     private final SessionCrypt sessionCrypt;
     private final int maxSessionLength;
-    private final JavaSerializationHelper serializationHelper;
+    private final JavaSerializer serializationHelper;
     private final SubjectExecutor subjectExecutor;
 
     private String sessionTokenName;
@@ -61,7 +62,7 @@ public class MongoDbSessionStore extends HttpSessionStore
      */
     public MongoDbSessionStore(
             String algorithm, int maxSessionLength, MongoCollection<Document> userSessions,
-            Map<Class<? extends WebContext>, SessionStore<? extends WebContext>> underlyingStores, List<String> extraTrustedPackages, String sessionTokenName)
+            Map<Class<? extends WebContext>, SessionStore> underlyingStores, List<String> extraTrustedPackages, String sessionTokenName)
     {
         this(algorithm, maxSessionLength, userSessions, underlyingStores, new SubjectExecutor(null),extraTrustedPackages, sessionTokenName);
     }
@@ -77,7 +78,7 @@ public class MongoDbSessionStore extends HttpSessionStore
      */
     public MongoDbSessionStore(
             String algorithm, int maxSessionLength, MongoCollection<Document> userSessions,
-            Map<Class<? extends WebContext>, SessionStore<? extends WebContext>> underlyingStores,
+            Map<Class<? extends WebContext>, SessionStore> underlyingStores,
             SubjectExecutor subjectExecutor, List<String> extraTrustedPackages, String sessionTokenName)
     {
         super(underlyingStores);
@@ -126,16 +127,17 @@ public class MongoDbSessionStore extends HttpSessionStore
     }
 
     @Override
-    public String getOrCreateSessionId(WebContext context)
+    public Optional<String> getSessionId(WebContext context, boolean createSession)
     {
         getOrCreateSsoKey(context);
-        return super.getOrCreateSessionId(context);
+        return super.getSessionId(context, createSession);
     }
 
     @Override
-    public Object get(WebContext context, String key)
+    public Optional<Object> get(WebContext context, String key)
     {
-        Object res = super.get(context, key);
+        Optional<Object> resOpt = super.get(context, key);
+        Object res = resOpt.orElse(null);
         if (res == null)
         {
             final SessionToken token = getOrCreateSsoKey(context);
@@ -148,7 +150,7 @@ public class MongoDbSessionStore extends HttpSessionStore
                     try
                     {
                         res =
-                                serializationHelper.unserializeFromBytes(
+                                serializationHelper.deserializeFromBytes(
                                         sessionCrypt.fromCryptedString(serialized, token));
                         //Once we have it, store it in the regular session store for later access
                         super.set(context, key, res);
@@ -173,7 +175,7 @@ public class MongoDbSessionStore extends HttpSessionStore
                 set(context, Pac4jConstants.USER_PROFILES, res);
             }
         }
-        return res;
+        return Optional.ofNullable(res);
     }
 
     @Override
@@ -183,7 +185,7 @@ public class MongoDbSessionStore extends HttpSessionStore
         {
             final SessionToken token = getOrCreateSsoKey(context);
             Serializable serializable = (Serializable) value;
-            byte[] serialized = new JavaSerializationHelper().serializeToBytes(serializable);
+            byte[] serialized = new JavaSerializer().serializeToBytes(serializable);
             try
             {
                 this.subjectExecutor.executeWithException(() -> userSessions.updateOne(
@@ -206,7 +208,7 @@ public class MongoDbSessionStore extends HttpSessionStore
         return super.destroySession(context);
     }
 
-    public JavaSerializationHelper getSerializationHelper()
+    public JavaSerializer getSerializationHelper()
     {
         return serializationHelper;
     }

@@ -14,10 +14,14 @@
 
 package org.finos.legend.server.pac4j.gitlab;
 
+import java.util.Optional;
 import org.pac4j.core.context.WebContext;
+import org.pac4j.core.context.session.SessionStore;
+import org.pac4j.core.credentials.Credentials;
+import org.pac4j.core.profile.UserProfile;
 import org.pac4j.core.profile.creator.ProfileCreator;
 
-public class GitlabPersonalAccessTokenProfileCreator implements ProfileCreator<GitlabPersonalAccessTokenCredentials, GitlabPersonalAccessTokenProfile>
+public class GitlabPersonalAccessTokenProfileCreator implements ProfileCreator
 {
     private final String gitlabHost;
 
@@ -27,8 +31,9 @@ public class GitlabPersonalAccessTokenProfileCreator implements ProfileCreator<G
     }
 
     @Override
-    public GitlabPersonalAccessTokenProfile create(GitlabPersonalAccessTokenCredentials credentials, WebContext webContext)
+    public Optional<UserProfile> create(Credentials creds, WebContext context, SessionStore sessionStore)
     {
-        return new GitlabPersonalAccessTokenProfile(credentials.getPersonalAccessToken(), credentials.getUserId(), credentials.getUserName(), this.gitlabHost);
+        GitlabPersonalAccessTokenCredentials credentials = (GitlabPersonalAccessTokenCredentials) creds;
+        return Optional.of(new GitlabPersonalAccessTokenProfile(credentials.getPersonalAccessToken(), credentials.getUserId(), credentials.getUserName(), this.gitlabHost));
     }
 }

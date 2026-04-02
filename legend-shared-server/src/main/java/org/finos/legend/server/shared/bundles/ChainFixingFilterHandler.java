@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import javax.annotation.Priority;
-import javax.servlet.FilterChain;
-import org.eclipse.jetty.server.Request;
+import jakarta.annotation.Priority;
+import jakarta.servlet.FilterChain;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.server.Request;
 
 @SuppressWarnings("unused")
 public class ChainFixingFilterHandler extends ServletHandler

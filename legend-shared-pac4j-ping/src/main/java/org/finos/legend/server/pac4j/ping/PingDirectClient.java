@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Map;
 import org.finos.legend.server.pac4j.SerializableProfile;
-import org.pac4j.core.profile.creator.AuthenticatorProfileCreator;
 import org.pac4j.http.client.direct.DirectBearerAuthClient;
 import org.pac4j.oidc.config.OidcConfiguration;
 import org.pac4j.oidc.credentials.authenticator.UserInfoOidcAuthenticator;
@@ -57,7 +56,7 @@ public class PingDirectClient extends DirectBearerAuthClient
     private Map<String, String> customParams;
 
     @Override
-    protected void clientInit()
+    protected void internalInit(boolean forceReinit)
     {
         OidcConfiguration config = new OidcConfiguration();
         config.setClientId(clientId);
@@ -82,7 +81,6 @@ public class PingDirectClient extends DirectBearerAuthClient
         config.setScope(scope);
 
         setAuthenticator(new UserInfoOidcAuthenticator(config));
-        setProfileCreator(new AuthenticatorProfileCreator<>());
-        super.clientInit();
+        super.internalInit(forceReinit);
     }
 }

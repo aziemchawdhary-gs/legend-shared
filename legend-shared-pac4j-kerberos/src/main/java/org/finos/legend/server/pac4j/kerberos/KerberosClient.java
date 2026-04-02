@@ -32,10 +32,10 @@ public class KerberosClient extends DirectKerberosClient
   private boolean debug;
 
   @Override
-  public void clientInit()
+  protected void internalInit(boolean forceReinit)
   {
-    defaultAuthenticator(
+    setAuthenticator(
         new DelegationKerberosAuthenticator(servicePrincipal, keyTabLocation, debug));
-    super.clientInit();
+    super.internalInit(forceReinit);
   }
 }

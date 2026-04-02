@@ -12,15 +12,11 @@
 package org.finos.legend.opentracing.jaxrs2;
 
 import io.opentracing.Tracer;
-import io.opentracing.contrib.jaxrs2.internal.CastUtils;
-import io.opentracing.contrib.jaxrs2.internal.SpanWrapper;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.ext.InterceptorContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.ext.InterceptorContext;
 import java.util.List;
-
-import static io.opentracing.contrib.jaxrs2.internal.SpanWrapper.PROPERTY_NAME;
 
 public class ServerTracingInterceptor extends TracingInterceptor
 {
@@ -39,11 +35,12 @@ public class ServerTracingInterceptor extends TracingInterceptor
     @Override
     protected SpanWrapper findSpan(InterceptorContext context)
     {
-        SpanWrapper spanWrapper = CastUtils.cast(context.getProperty(PROPERTY_NAME), SpanWrapper.class);
+        Object prop = context.getProperty(SpanWrapper.PROPERTY_NAME);
+        SpanWrapper spanWrapper = prop instanceof SpanWrapper ? (SpanWrapper) prop : null;
         if (spanWrapper == null && servletReq != null)
         {
-            spanWrapper = CastUtils
-                    .cast(servletReq.getAttribute(PROPERTY_NAME), SpanWrapper.class);
+            Object attr = servletReq.getAttribute(SpanWrapper.PROPERTY_NAME);
+            spanWrapper = attr instanceof SpanWrapper ? (SpanWrapper) attr : null;
         }
         return spanWrapper;
     }

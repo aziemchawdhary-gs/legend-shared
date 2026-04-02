@@ -18,16 +18,19 @@ import com.google.common.base.Strings;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
 import java.util.Collections;
+import java.util.Optional;
 import org.commonjava.mimeparse.MIMEParse;
 import org.pac4j.core.context.WebContext;
+import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.http.ajax.DefaultAjaxRequestResolver;
 
 public class AcceptHeaderAjaxRequestResolver extends DefaultAjaxRequestResolver
 {
   @Override
-  public boolean isAjax(WebContext context)
+  public boolean isAjax(WebContext webContext, SessionStore sessionStore)
   {
-    String acceptHeader = context.getRequestHeader(HttpHeaders.ACCEPT);
+    Optional<String> acceptHeaderOpt = webContext.getRequestHeader(HttpHeaders.ACCEPT);
+    String acceptHeader = acceptHeaderOpt.orElse(null);
     if (Strings.isNullOrEmpty(acceptHeader))
     {
       return true;
